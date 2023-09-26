@@ -1,6 +1,8 @@
 const mqtt = require('mqtt');
 const colors = require('colors');
 
+const SensorData = require('../db/models/SensorData')
+
 const mqttOptions = {
     clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
     username: process.env.MQTT_USERNAME,
@@ -22,6 +24,18 @@ const connect = () => {
         console.log(`[MQTT] ${colors.green("Received message:")} ${colors.blue(topic)} ${payload.toString()}`);
 
         const jsonData = JSON.parse(payload);
+
+        const newSensorData = new SensorData({
+            sensor: jsonData.sensor,
+            room: 'TestRoom',
+            co2Level: jsonData.eCO2,
+            noiseLevel: jsonData.sound
+        });
+
+        const savedSensorData = await newSensorData.save();
+
+        // if (savedSensorData)
+        //     console.log(`[DB] ${colors.green(`Data saved successfully: ${savedSensorData}`)}`)
     });
 
     return mqttClient;
