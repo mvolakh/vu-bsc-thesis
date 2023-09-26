@@ -1,0 +1,13 @@
+.git
+
+*.env
+
+/resources
+/test
+/vimo
+/client/node_modules
+/server/node_modules
+/client/.vscode
+/server/.vscode
+
+TODO.md
