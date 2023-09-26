@@ -8,7 +8,7 @@ const mqttOptions = {
 };
 
 const connect =  async () => {
-    const mqttClient = mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
+    const mqttClient = await mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
 
     mqttClient.on('connect', () => {
         console.log(`[MQTT] ${colors.green("Connection established successfully")}`);
