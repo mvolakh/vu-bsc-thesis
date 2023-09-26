@@ -7,8 +7,8 @@ const mqttOptions = {
     password: process.env.MQTT_PASSWORD
 };
 
-const connect =  async () => {
-    const mqttClient = await mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
+const connect = () => {
+    const mqttClient = mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
 
     mqttClient.on('connect', () => {
         console.log(`[MQTT] ${colors.green("Connection established successfully")}`);
