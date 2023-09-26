@@ -1,0 +1,28 @@
+{
+  "name": "vu-thesis-server",
+  "version": "1.0.0",
+  "description": "Room occupancy monitoring and prediction system tailored for university buildings.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mvolakh/vu-bsc-thesis.git"
+  },
+  "author": "Mikita Volakh",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mvolakh/vu-bsc-thesis/issues"
+  },
+  "homepage": "https://github.com/mvolakh/vu-bsc-thesis#readme",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.3",
+    "morgan": "^1.10.0",
+    "mqtt": "^5.0.5"
+  }
+}
