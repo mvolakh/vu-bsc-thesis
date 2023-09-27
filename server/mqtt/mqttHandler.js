@@ -2,6 +2,7 @@ const mqtt = require('mqtt');
 const colors = require('colors');
 
 const SensorData = require('../db/models/SensorData')
+const Room = require('../db/models/Room')
 
 const mqttOptions = {
     clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
@@ -30,15 +31,14 @@ const connect = (io) => {
             messageBuffer.set(jsonData.sensor, jsonData);
         } else if (isType2Message(jsonData) && messageBuffer.has(jsonData.sensor)) {
             const completeData = { ...messageBuffer.get(jsonData.sensor), ...jsonData }
+            const room = await Room.findOne({ sensor: completeData.sensor });
 
-            // save to the database
             const newSensorData = new SensorData({ ...completeData })
             const savedSensorData = await newSensorData.save();
+            // console.log(`[DB] ${colors.green("Saved retrieved message:")} ${savedSensorData.toString()}`);
 
-            //send to the socket
-            io.emit('mqttData', completeData);
+            io.emit('mqttData', { ...completeData, room: room.name, floor: room.floor} );
 
-            // clean the buffer
             messageBuffer.delete(jsonData.sensor)
         }
     });

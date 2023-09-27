@@ -44,4 +44,18 @@ async function initRooms() {
     }
 };
 
-module.exports = { connect };
+async function getRoomAndFloor(sensorName) {
+    try {
+      const room = await Room.findOne({ sensor: sensorName });
+  
+      if (room) {
+        return { roomName: room.name, floor: room.floor };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+module.exports = { connect, initRooms, getRoomAndFloor };
