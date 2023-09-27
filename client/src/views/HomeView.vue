@@ -11,6 +11,10 @@ export default defineComponent({
 
         async function ioConnect() {
             socket.value = io('http://localhost:8000');
+
+            socket.value.on("mqttData", (mqttData) => {
+                console.log("Received MQTT data:", mqttData)
+            })
         }
 
         onMounted(() => {

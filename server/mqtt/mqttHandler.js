@@ -2,6 +2,7 @@ const mqtt = require('mqtt');
 const colors = require('colors');
 
 const SensorData = require('../db/models/SensorData')
+const Room = require('../db/models/Room')
 
 const mqttOptions = {
     clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
@@ -9,7 +10,7 @@ const mqttOptions = {
     password: process.env.MQTT_PASSWORD
 };
 
-const connect = () => {
+const connect = (io) => {
     const mqttClient = mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
 
     mqttClient.on('connect', () => {
@@ -20,25 +21,37 @@ const connect = () => {
         })
     });
 
+    const messageBuffer = new Map();
     mqttClient.on('message', async (topic, payload) => {
         // console.log(`[MQTT] ${colors.green("Received message:")} ${colors.blue(topic)} ${payload.toString()}`);
 
         const jsonData = JSON.parse(payload);
 
-        const newSensorData = new SensorData({
-            sensor: jsonData.sensor,
-            room: 'TestRoom',
-            co2Level: jsonData.eCO2,
-            noiseLevel: jsonData.sound
-        });
+        if (isType1Message(jsonData)) {
+            messageBuffer.set(jsonData.sensor, jsonData);
+        } else if (isType2Message(jsonData) && messageBuffer.has(jsonData.sensor)) {
+            const completeData = { ...messageBuffer.get(jsonData.sensor), ...jsonData }
+            const room = await Room.findOne({ sensor: completeData.sensor });
 
-        // const savedSensorData = await newSensorData.save();
+            const newSensorData = new SensorData({ ...completeData })
+            const savedSensorData = await newSensorData.save();
+            // console.log(`[DB] ${colors.green("Saved retrieved message:")} ${savedSensorData.toString()}`);
 
-        // if (savedSensorData)
-        //     console.log(`[DB] ${colors.green(`Data saved successfully: ${savedSensorData}`)}`)
+            io.emit('mqttData', { ...completeData, room: room.name, floor: room.floor} );
+
+            messageBuffer.delete(jsonData.sensor)
+        }
     });
 
     return mqttClient;
+}
+
+const isType1Message = (message) => {
+    return 'eCO2' in message;
+}
+
+const isType2Message = (message) => {
+    return 'color_r' in message;
 }
 
 module.exports = { connect };

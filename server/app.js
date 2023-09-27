@@ -8,6 +8,8 @@ const mqttHandler = require('./mqtt/mqttHandler');
 const dbHandler = require('./db/dbHandler');
 const socketHandler = require('./socketio/socketHandler');
 
+const sensorDataRouter = require('./routes/sensorData')
+
 const app = express();
 
 app.use(morgan('dev'));
@@ -20,12 +22,11 @@ const initializeApp = async () => {
         });
 
         await dbHandler.connect();
-        await mqttHandler.connect();
-        await socketHandler.connect(server);
+        const io = await socketHandler.connect(server);
+        const mqttClient = await mqttHandler.connect(io);
 
-        app.get('/', (req, res) => {
-            res.send('Hello world!');
-        });
+
+        app.use('/api/sensordata', sensorDataRouter);
     } catch (err) {
         console.error(`[APP] ${colors.red(`Error initializing the application: ${err}`)}`);
     }
