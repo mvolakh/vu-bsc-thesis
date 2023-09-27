@@ -21,7 +21,7 @@ const connect = () => {
     });
 
     mqttClient.on('message', async (topic, payload) => {
-        console.log(`[MQTT] ${colors.green("Received message:")} ${colors.blue(topic)} ${payload.toString()}`);
+        // console.log(`[MQTT] ${colors.green("Received message:")} ${colors.blue(topic)} ${payload.toString()}`);
 
         const jsonData = JSON.parse(payload);
 
@@ -32,7 +32,7 @@ const connect = () => {
             noiseLevel: jsonData.sound
         });
 
-        const savedSensorData = await newSensorData.save();
+        // const savedSensorData = await newSensorData.save();
 
         // if (savedSensorData)
         //     console.log(`[DB] ${colors.green(`Data saved successfully: ${savedSensorData}`)}`)
