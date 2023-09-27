@@ -16,7 +16,7 @@ const connect = (server) => {
         });
     });
 
-    return { io };
+    return io ;
 }
 
 module.exports = { connect };
