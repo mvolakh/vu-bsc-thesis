@@ -9,6 +9,7 @@ const dbHandler = require('./db/dbHandler');
 const socketHandler = require('./socketio/socketHandler');
 
 const sensorDataRouter = require('./routes/sensorData')
+const roomDataRouter = require('./routes/roomData')
 
 const app = express();
 
@@ -27,6 +28,7 @@ const initializeApp = async () => {
 
 
         app.use('/api/sensordata', sensorDataRouter);
+        app.use('/api/roomdata', roomDataRouter);
     } catch (err) {
         console.error(`[APP] ${colors.red(`Error initializing the application: ${err}`)}`);
     }
