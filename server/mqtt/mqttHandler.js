@@ -31,13 +31,26 @@ const connect = (io) => {
             messageBuffer.set(jsonData.sensor, jsonData);
         } else if (isType2Message(jsonData) && messageBuffer.has(jsonData.sensor)) {
             const completeData = { ...messageBuffer.get(jsonData.sensor), ...jsonData }
-            const room = await Room.findOne({ sensor: completeData.sensor });
+            let room = await Room.findOne({ sensor: completeData.sensor });
+            // const colorCode = calcRoomColorCode(completeData);
+            room.colorCode = calcRoomColorCode(completeData);
+            await room.save();
+
+            room = Room.findOne({ sensor: completeData.sensor });
 
             const newSensorData = new SensorData({ ...completeData })
             const savedSensorData = await newSensorData.save();
             // console.log(`[DB] ${colors.green("Saved retrieved message:")} ${savedSensorData.toString()}`);
 
-            io.emit('mqttData', { ...completeData, room: room.name, floor: room.floor} );
+            io.emit('mqttData', { 
+                ...savedSensorData.toJSON(), 
+                room: room.name, 
+                floor: room.floor, 
+                x_coord: room.x_coord,
+                y_coord: room.y_coord,
+                width: room.width,
+                height: room.height
+            });
 
             messageBuffer.delete(jsonData.sensor)
         }
@@ -52,6 +65,18 @@ const isType1Message = (message) => {
 
 const isType2Message = (message) => {
     return 'color_r' in message;
+}
+
+const calcRoomColorCode = (message) => {
+    if (message.eCO2 > 1000) {
+        return 'red'
+    } else if (message.eCO2 > 750) {
+        return 'orange'
+    } else if (message.eCO2 > 0) {
+        return 'green'
+    } else {
+        return 'grey'
+    }
 }
 
 module.exports = { connect };
