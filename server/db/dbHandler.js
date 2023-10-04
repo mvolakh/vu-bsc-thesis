@@ -11,9 +11,10 @@ const dbOptions = {
 
 const connect = () => {
     mongoose.connect(process.env.DB_URI, dbOptions)
-        .then(() =>  {
+        .then(async () =>  {
             console.log(`[DB] ${colors.green(`Connected to the DB`)}`);
-            initRooms()
+            await initRooms();
+            await updateRoomCoords();
         })
         .catch((err) => console.log(`[DB] ${colors.red(`Error while connecting to the DB: ${err}`)}`));
 };
@@ -43,6 +44,96 @@ async function initRooms() {
         console.log(`[DB] ${colors.red(`Room data initialization failed: ${err}`)}`)
     }
 };
+
+async function updateRoomCoords() {
+  try {
+    const roomCoords = [
+      {
+        name: 'NU-11A-29',
+        width: 23,
+        height: 38,
+        x_coord: 590,
+        y_coord: 275,
+      },
+      {
+        name: 'NU-11A-33',
+        width: 48,
+        height: 38,
+        x_coord: 639,
+        y_coord: 275,
+      },
+      {
+        name: 'NU-11A-37',
+        width: 72,
+        height: 38,
+        x_coord: 688,
+        y_coord: 275,
+      },
+      {
+        name: 'NU-11A-46',
+        width: 48,
+        height: 36,
+        x_coord: 786,
+        y_coord: 332,
+      },
+      {
+        name: 'NU-11A-48',
+        width: 23,
+        height: 38,
+        x_coord: 836,
+        y_coord: 275,
+      },
+      {
+        name: 'NU-11A-56',
+        width: 24,
+        height: 36,
+        x_coord: 909,
+        y_coord: 332,
+      },
+      {
+        name: 'NU-11A-58',
+        width: 24,
+        height: 36,
+        x_coord: 934,
+        y_coord: 332,
+      },
+      {
+        name: 'NU-11A-60',
+        width: 49,
+        height: 59,
+        x_coord: 909,
+        y_coord: 369,
+      },
+      {
+        name: 'NU-11A-65',
+        width: 48,
+        height: 38,
+        x_coord: 1032,
+        y_coord: 275,
+      },
+      {
+        name: 'NU-11A-66',
+        width: 35,
+        height: 34,
+        x_coord: 1020,
+        y_coord: 332,
+      }
+    ];
+
+    for (const data of roomCoords) {
+      const { name, height, width, x_coord, y_coord } = data;
+
+      await Room.updateOne(
+          { name },
+          { $set: { height, width, x_coord, y_coord } }
+      );
+    }
+
+    console.log(`[DB] ${colors.green(`Room coords updated successfully.`)}`);
+  } catch (ert) {
+    console.log(`[DB] ${colors.red(`Room coords data update failed: ${err}`)}`)
+  }
+}
 
 async function getRoomAndFloor(sensorName) {
     try {
