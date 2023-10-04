@@ -1,24 +1,23 @@
 <script lang="ts">
-import { defineComponent } from 'vue';
-
+import { defineComponent, ref, onMounted } from 'vue';
 import NavBar from './components/NavBar.vue'
 
 export default defineComponent({
     name: 'App',
     components: { NavBar },
-    setup() {}
+    setup() {
+      return {};
+    }
 })
 </script>
 
 <template>
-  <v-card>
-    <v-layout>
-      <NavBar/>
-      <v-main>
-        <RouterView />
-      </v-main>
-    </v-layout>
-  </v-card>
+  <v-layout>
+    <NavBar/>
+    <v-main>
+      <RouterView />
+    </v-main>
+  </v-layout>
 </template>
 
 <style scoped>
