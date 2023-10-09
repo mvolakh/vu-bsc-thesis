@@ -1,21 +1,24 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, provide } from 'vue';
 import NavBar from './components/NavBar.vue'
+import type { RoomData } from './types/RoomData';
 
 export default defineComponent({
     name: 'App',
     components: { NavBar },
     setup() {
-      return {};
+      const roomData = ref<RoomData>();
+
+      return { roomData };
     }
 })
 </script>
 
 <template>
   <v-layout>
-    <NavBar/>
+    <NavBar :roomData="roomData" />
     <v-main>
-      <RouterView />
+      <RouterView @showRoomData="(data: RoomData) => { roomData = data }"/>
     </v-main>
   </v-layout>
 </template>
