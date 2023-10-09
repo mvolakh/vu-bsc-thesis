@@ -24,4 +24,5 @@ export interface RoomData {
       timestamp: string;
       __v: number;
     };
+  isHighlighted?: boolean;
 }
