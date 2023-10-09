@@ -36,7 +36,7 @@ const connect = (io) => {
             room.colorCode = calcRoomColorCode(completeData);
             await room.save();
 
-            room = Room.findOne({ sensor: completeData.sensor });
+            room = await Room.findOne({ sensor: completeData.sensor });
 
             const newSensorData = new SensorData({ ...completeData })
             const savedSensorData = await newSensorData.save();
@@ -49,7 +49,8 @@ const connect = (io) => {
                 x_coord: room.x_coord,
                 y_coord: room.y_coord,
                 width: room.width,
-                height: room.height
+                height: room.height,
+                colorCode: room.colorCode
             });
 
             messageBuffer.delete(jsonData.sensor)
@@ -68,15 +69,21 @@ const isType2Message = (message) => {
 }
 
 const calcRoomColorCode = (message) => {
-    if (message.eCO2 > 1000) {
-        return 'red'
-    } else if (message.eCO2 > 750) {
-        return 'orange'
-    } else if (message.eCO2 > 0) {
-        return 'green'
-    } else {
+    if (!message.eCO2 && !calculateAverageLightLevel(message)) {
         return 'grey'
+    } else {
+        if (message.eCO2 > 1000 && calculateAverageLightLevel(message) > 15) {
+            return 'red'
+        } else if (message.eCO2 > 750 && calculateAverageLightLevel(message) > 15) {
+            return 'orange'
+        } else {
+            return 'green'
+        } 
     }
+}
+
+const calculateAverageLightLevel = (message) => {
+    return (message.color_b + message.color_c + message.color_r + message.color_g) / 4;
 }
 
 module.exports = { connect };
