@@ -65,7 +65,7 @@ router.get('/:id', async (req, res, next) => {
                 name: 1
             }
         }
-    ]).exec();
+    ]).allowDiskUse(true).exec();
 
     res.status(200).json(latestDataByRoom)
 })
