@@ -2,12 +2,17 @@
 
 *.env
 
+
 /resources
 /test
 /vimo
-/client/node_modules
-/server/node_modules
-/client/.vscode
-/server/.vscode
+/snapshots
+
+/client/node_modules/
+/client/.vscode/
+
+/server/node_modules/
+/server/.vscode/
+/server/db/backups/
 
 TODO.md
