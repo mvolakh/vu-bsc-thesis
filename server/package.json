@@ -4,7 +4,16 @@
   "description": "Server for room occupancy monitoring and prediction system tailored for university buildings.",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "nodemon app.js",
+    "preprocess-construct": "node ./lstm/preprocess-construct.js",
+    "preprocess-average": "node ./lstm/preprocess-average.js",
+    "preprocess-normalize": "node ./lstm/preprocess-normalize.js",
+    "preprocess-augment": "node ./lstm/preprocess-augment.js",
+    "preprocess-reduce": "node ./lstm/preprocess-reduce.js",
+    "preprocess-sort": "node ./lstm/preprocess-sort.js",
+    "train": "python ./lstm/train.py",
+    "predict": "python ./lstm/predict.py",
+    "install-python-dependencies": "pip install tensorflow pymongo python-dotenv pandas",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,13 +27,18 @@
   },
   "homepage": "https://github.com/mvolakh/vu-bsc-thesis#bsc-thesis-project",
   "dependencies": {
+    "brain.js": "^2.0.0-beta.23",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "dotenv-expand": "^10.0.0",
     "express": "^4.18.2",
+    "fast-csv": "^4.3.6",
     "mongoose": "^7.5.3",
     "morgan": "^1.10.0",
     "mqtt": "^5.0.5",
+    "node-schedule": "^2.1.1",
+    "nodemon": "^3.0.1",
     "socket.io": "^4.7.2",
     "xlsx": "^0.18.5"
   }
