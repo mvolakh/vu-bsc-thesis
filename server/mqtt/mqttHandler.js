@@ -2,7 +2,9 @@ const mqtt = require('mqtt');
 const colors = require('colors');
 
 const SensorData = require('../db/models/SensorData')
-const Room = require('../db/models/Room')
+const Room = require('../db/models/Room');
+const LatestSensorData = require('../db/models/LatestSensorData');
+const Prediction = require('../db/models/Prediction');
 
 const mqttOptions = {
     clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
@@ -38,9 +40,17 @@ const connect = (io) => {
 
             room = await Room.findOne({ sensor: completeData.sensor });
 
-            const newSensorData = new SensorData({ ...completeData })
+            const newSensorData = new SensorData({ ...completeData });
             const savedSensorData = await newSensorData.save();
             // console.log(`[DB] ${colors.green("Saved retrieved message:")} ${savedSensorData.toString()}`);
+
+            const latestSensorData = await LatestSensorData.findOneAndUpdate(
+                { sensor: completeData.sensor },
+                { ...completeData, timestamp: new Date() },
+                { upsert: true, new: true }
+            )
+
+            // console.log(`[DB] ${colors.green("Saved retrieved message:")} ${latestSensorData.toString()}`);
 
             io.emit('mqttData', { 
                 ...savedSensorData.toJSON(), 
@@ -52,6 +62,16 @@ const connect = (io) => {
                 height: room.height,
                 colorCode: room.colorCode
             });
+
+            // const predictions = await Prediction.findOne({ sensor: completeData.sensor });
+
+            // if (predictions) {
+            //     // console.log(predictions)
+            //     io.emit('forecastData', {
+            //         name: 'NU-11A-46',
+            //         sensorData: predictions
+            //     })
+            // }
 
             messageBuffer.delete(jsonData.sensor)
         }
