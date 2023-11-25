@@ -2,11 +2,11 @@ const express = require('express');
 
 const SensorData = require('../db/models/SensorData')
 const Room = require('../db/models/Room')
+const LatestSensorData = require('../db/models/LatestSensorData')
 
 const router = express.Router();
 
 router.get('/:id', async (req, res, next) => {
-    // const sensorData = await SensorData.find();
     const latestDataByRoom = await Room.aggregate([
         {
             $match: {
@@ -15,7 +15,7 @@ router.get('/:id', async (req, res, next) => {
         },
         {
             $lookup: {
-                from: 'sensordatas',
+                from: 'latestsensordatas',
                 localField: 'sensor',
                 foreignField: 'sensor',
                 as: 'sensorData'
@@ -30,8 +30,7 @@ router.get('/:id', async (req, res, next) => {
         },
         {
             $sort: {
-                'sensorData.timestamp': -1,
-                'sensorData.CO2_emission': 1
+                'sensorData.timestamp': -1
             }
         },
         {
@@ -65,9 +64,11 @@ router.get('/:id', async (req, res, next) => {
                 name: 1
             }
         }
-    ]).allowDiskUse(true).exec();
+    ]).allowDiskUse(true);
 
-    res.status(200).json(latestDataByRoom)
+    res.status(200).json(latestDataByRoom);
 })
+
+
 
 module.exports = router;
