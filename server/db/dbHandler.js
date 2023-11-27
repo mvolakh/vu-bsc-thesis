@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const colors = require('colors');
 const xlsx = require('xlsx');
 
-const Room = require('./models/Room')
+const Room = require('./models/Room');
+const SensorData = require('./models/SensorData');
 
 const dbOptions = {
     useNewUrlParser: true, 
@@ -15,6 +16,8 @@ const connect = () => {
             console.log(`[DB] ${colors.green(`Connected to the DB`)}`);
             await initRooms();
             await updateRoomCoords();
+            await indexSensorData();
+            await indexRooms();
         })
         .catch((err) => console.log(`[DB] ${colors.red(`Error while connecting to the DB: ${err}`)}`));
 };
@@ -32,9 +35,9 @@ async function initRooms() {
       
             if (roomNumber && deviceID && floorNumber !== null) {
                 await Room.updateOne(
-                  { name: roomNumber },
-                  { $addToSet: { sensor: deviceID }, floor: floorNumber },
-                  { upsert: true }
+                    { name: roomNumber },
+                    { $addToSet: { sensor: deviceID }, floor: floorNumber },
+                    { upsert: true }
                 );
             }
         }
@@ -44,6 +47,52 @@ async function initRooms() {
         console.log(`[DB] ${colors.red(`Room data initialization failed: ${err}`)}`)
     }
 };
+
+async function indexSensorData() {
+    try {
+        await SensorData.collection.createIndex({ "timestamp": -1 }, (err, result) => {
+            if (result) {
+                console.log(`[DB] ${colors.green(`Index created for SensorData collection : ${result}`)}`)
+            }
+        });
+
+        await SensorData.collection.createIndex({ "sensor": 1 }, (err, result) => {
+            if (result) {
+                console.log(`[DB] ${colors.green(`Index created for SensorData collection : ${result}`)}`)
+            }
+        });
+
+        console.log(`[DB] ${colors.green(`Indexing of SensorData collection completed successfully.`)}`);
+    } catch (err) {
+        console.log(`[DB] ${colors.red(`Indexing of SensorData collection failed: ${err}`)}`)
+    }
+}
+
+async function indexRooms() {
+    try {
+        await Room.collection.createIndex({ "floor": 1, "sensor": 1 }, (err, result) => {
+            if (result) {
+                console.log(`[DB] ${colors.green(`Index created for Room collection : ${result}`)}`)
+            }
+
+            if (err)
+                console.log(err)
+        });
+
+        // await Room.collection.createIndex({ "name": 1 }, (err, result) => {
+        //     if (result) {
+        //         console.log(`[DB] ${colors.green(`Index created for Room collection : ${result}`)}`)
+        //     }
+
+        //     if (err)
+        //         console.log(err)
+        // });
+
+        console.log(`[DB] ${colors.green(`Indexing of Room collection completed successfully.`)}`);
+    } catch (err) {
+        console.log(`[DB] ${colors.red(`Indexing of Room collection failed: ${err}`)}`);
+   }
+}
 
 async function updateRoomCoords() {
   try {
