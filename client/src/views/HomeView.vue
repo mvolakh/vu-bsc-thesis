@@ -1,21 +1,22 @@
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, onMounted, onBeforeUnmount, watchEffect, watch } from 'vue';
 import {io, Socket} from 'socket.io-client';
 import axios from 'axios'
 import Konva from 'konva';
 
 import type { RoomData } from '@/types/RoomData'
 import type { MQTTSensorData } from '@/types/MQTTSensorData';
-
+import type { ForecastData } from '@/types/ForecastData';
 
 export default defineComponent({
     name: 'Home',
     components: {},
-    emits: ["showRoomData"],
-    setup() {
+    emits: ["showRoomData", "upd"],
+    setup(props, { emit }) {
         const counter = ref(0);
 
         const histSensorData = ref<RoomData[]>([]);
+        const forecastData = ref<ForecastData[]>([]);
         let socket = ref<Socket | null>();
 
         async function fetchHistoricSensorData() {
@@ -33,6 +34,21 @@ export default defineComponent({
                 })
         }
 
+        async function fetchPredictions() {
+            axios.get('/api/forecast')
+                .then(res => {
+                    if (res.status == 200 || res.status == 304) {
+                        // console.log(`Fetched predictions ${JSON.stringify(res.data, null, 2)}`)
+                        forecastData.value = res.data;
+                    } 
+                })
+                .catch(err => {
+                    if (err) {
+                        console.log(`Failed to fetch predictions ${err}`)
+                    }
+                })
+        }
+
         async function ioConnect() {
             socket.value = io('http://localhost:8000');
 
@@ -41,6 +57,19 @@ export default defineComponent({
                 const roomToUpdate = histSensorData.value.find((room) => room.name === mqttData.room);
                     if (roomToUpdate) {
                         updateRoomData(mqttData);
+                    }
+            })
+
+            socket.value.on("forecastData", (data: ForecastData) => {
+                console.log("Received forecast data:", data);
+                if (!data.name) {
+                    return;
+                }
+                console.log("reached")
+                console.log(data.sensorData.sensor);
+                const predictionsToUpdate = forecastData.value.find((r) => r.name === data.name);
+                    if (predictionsToUpdate) {
+                        updateForecastData(data);
                     }
             })
         }
@@ -65,6 +94,31 @@ export default defineComponent({
                 histSensorData.value[roomIndex].latestSensorData.timestamp = mqttData.timestamp;
             }
         };
+
+        const updateForecastData = (data: ForecastData) => {
+            const predictionsIndex = forecastData.value.findIndex((r) => r.name === data.name);
+            if (predictionsIndex !== -1) {
+                console.log("found1!")
+                forecastData.value[predictionsIndex] = data;
+                emit('upd', forecastData.value[predictionsIndex]);
+            }
+        }
+
+        // const updateForecastDataSwitch = (name: string) => {
+        //     console.log("updated forecasts!")
+        //     const predictionsIndex = forecastData.value.findIndex((r) => r.name === name);
+        //     if (predictionsIndex !== -1) {
+        //         emit('upd', forecastData.value[predictionsIndex]);
+        //     }
+        // }
+
+        const getPredictionsByRoom = (room: RoomData) => {
+            const roomIndex = forecastData.value.findIndex((r) => r.sensorData.sensor === room.latestSensorData.sensor);
+            if (roomIndex !== -1) {
+                console.log(forecastData.value[roomIndex]);
+                return forecastData.value[roomIndex];
+            }
+        }
 
         // const stage = ref<Konva.Stage>();
         // const layer = ref<Konva.Layer>();
@@ -147,7 +201,8 @@ export default defineComponent({
         };
 
         onMounted(async () => {
-            await fetchHistoricSensorData()
+            await fetchHistoricSensorData();
+            await fetchPredictions();
             await ioConnect();
 
             resizeCanvas();
@@ -173,6 +228,11 @@ export default defineComponent({
             socket.value?.disconnect();
         });
 
+        // watch(() => forecastData, () => {
+        //     console.log("cahsdjbasdjf")
+        //     emit('showRoomData', undefined, forecastData.value[0]);
+        // });
+
         return { 
             stageSize, 
             imageConfig, 
@@ -185,7 +245,8 @@ export default defineComponent({
             calculateRoomHeight, 
             onZoom, 
             highlightRoom,
-            counter
+            counter,
+            getPredictionsByRoom
         }
     }
 })
@@ -199,7 +260,10 @@ export default defineComponent({
                 <v-rect
                     @mouseover="highlightRoom(room, true)"
                     @mouseout="highlightRoom(room, false)"
-                    @click="$emit('showRoomData', room)"
+                    @touchstart="highlightRoom(room, true)"
+                    @touchend="highlightRoom(room, false)"
+                    @click="$emit('showRoomData', room, getPredictionsByRoom(room))"
+                    @tap="$emit('showRoomData', room, getPredictionsByRoom(room))"
                     v-for="(room, index) in histSensorData"
                     :key="index"
                     :config="{
