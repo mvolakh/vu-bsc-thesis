@@ -14,6 +14,7 @@ const schedulePredictions = async (io) => {
     const job = schedule.scheduleJob(everyHour, async () => {
         console.log(`[SCHEDULER] ${colors.blue(`${new Date().toLocaleTimeString()}`)} ${colors.green("Started scheduled database cleanup.")}`);
         execDatabaseCleanup();
+        // execDatabaseBackup();
 
         console.log(`[SCHEDULER] ${colors.blue(`${new Date().toLocaleTimeString()}`)} ${colors.green("Started forecasting.")}`);
         execPredictScript(io);
@@ -23,8 +24,8 @@ const schedulePredictions = async (io) => {
     return job;
 }
 
-const execDatabaseCleanup = async () => {
-    console.log(`[DB] ${colors.green("Database cleanup script started.")}`);
+const execDatabaseBackup = async () => {
+    console.log(`[DB] ${colors.green("Database backup script started.")}`);
 
     const timestampBackup = new Date().toLocaleString('en-US', 
         { 
@@ -43,21 +44,22 @@ const execDatabaseCleanup = async () => {
 
     childProcess.on('close', async (status) => {
         console.log(`[DB] ${colors.green("Finished creating a scheduled backup.")}`);
-
-
-        console.log(`[DB] ${colors.green("Starting to delete old entries.")}`);
-
-        const daysToKeep = 3;
-        const timestampDeletion = new Date();
-        timestampDeletion.setDate(timestampDeletion.getDate() - daysToKeep);
-
-        try {
-            const res = await SensorData.deleteMany({ timestamp: { $lt: timestampDeletion } });
-            console.log(`[DB] ${colors.green("Successfuly deleted old entries. Documents deleted:")} ${res.deletedCount}`);
-          } catch (error) {
-            console.log(`[DB] ${colors.red("Error occurred while deleting old entries:")} ${err}`);
-          }
     });
+}
+
+const execDatabaseCleanup = async () => {
+    console.log(`[DB] ${colors.green("Starting to delete old entries.")}`);
+
+    const daysToKeep = 3;
+    const timestampDeletion = new Date();
+    timestampDeletion.setDate(timestampDeletion.getDate() - daysToKeep);
+
+    try {
+        const res = await SensorData.deleteMany({ timestamp: { $lt: timestampDeletion } });
+        console.log(`[DB] ${colors.green("Successfuly deleted old entries. Documents deleted:")} ${res.deletedCount}`);
+      } catch (error) {
+        console.log(`[DB] ${colors.red("Error occurred while deleting old entries:")} ${err}`);
+      }
 }
 
 const execPredictScript = async (io) => {
