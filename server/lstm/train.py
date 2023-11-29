@@ -6,6 +6,7 @@ import warnings
 from keras.models import Model, Sequential, load_model
 from keras.layers import Input, LSTM, Dense, Flatten, Reshape, GRU, Conv1D, MaxPooling1D
 from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import numpy as np
 import pandas as pd
 from scipy.stats import zscore
@@ -23,7 +24,7 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 load_dotenv()
 
-DATASET_PATH = os.getenv('PROCESSED_BYSENSOR_DATA_PATH')
+DATASET_PATH = os.getenv('PROCESSED_BYSENSOR_REM_DATA_PATH')
 FILE_PATHS = glob(os.path.join(DATASET_PATH, '*.csv'))
 SENSOR_NAMES = [os.path.splitext(os.path.basename(file_path))[0] for file_path in FILE_PATHS]
 
@@ -39,7 +40,7 @@ normalization_params = {}
 label_encoder = LabelEncoder()
 
 def preprocess_data():
-    global label_encoder, normalization_params, X, y
+    global label_encoder, normalization_params, x_train, y_train, x_val, y_val, x_test, y_test
     sensor_dfs = []
 
     for sensor_name, file_path in zip(SENSOR_NAMES, FILE_PATHS):
@@ -70,9 +71,7 @@ def preprocess_data():
     for df in sensor_dfs:
         df['sensor'] = label_encoder.transform(df['sensor'])
     
-    inputs, outputs = create_sliding_window_sequences(sensor_dfs, WINDOW_SIZE, PREDICTION_HORIZON)
-    X = np.array(inputs)
-    y = np.array(outputs)
+    x_train, y_train, x_val, y_val, x_test, y_test = create_sliding_window_sequences(sensor_dfs, WINDOW_SIZE, PREDICTION_HORIZON)
     
 
 # Read and preprocess a CSV file for a specific sensor
@@ -152,38 +151,85 @@ def compute_thresholds(df):
     thresholds_df = pd.DataFrame(thresholds)
     return thresholds_df
 
-def create_sliding_window_sequences(dfs, input_size, output_size):
-    inputs = []
-    outputs = []
+# def create_sliding_window_sequences(dfs, input_size, output_size, validation_ratio=0.15):
+#     x_train = []
+#     y_train = []
+#     x_val = []
+#     y_val = []
+    
+#     for df in dfs:
+#         total_samples = len(df)
+#         val_samples = int(total_samples * validation_ratio)
+#         train_samples = total_samples - val_samples - input_size - output_size + 1
+        
+#         for i in range(train_samples):
+#             x_train.append(df[i:i+input_size])
+#             y_train.append(df[i+input_size:i+input_size+output_size])
+        
+#         for i in range(train_samples, total_samples - input_size - output_size + 1):
+#             x_val.append(df[i:i+input_size])
+#             y_val.append(df[i+input_size:i+input_size+output_size])
+    
+#     return np.array(x_train), np.array(y_train), np.array(x_val), np.array(y_val)
+
+def create_sliding_window_sequences(dfs, input_size, output_size, validation_ratio=0.1, test_ratio=0.1):
+    x_train = []
+    y_train = []
+    x_val = []
+    y_val = []
+    x_test = []
+    y_test = []
     
     for df in dfs:
-        for i in range(len(df) - input_size - output_size + 1):
-            inputs.append(df[i:i+input_size])
-            outputs.append(df[i+input_size:i+input_size+output_size])
+        total_samples = len(df)
+        test_samples = int(total_samples * test_ratio)
+        val_samples = int(total_samples * validation_ratio)
+        train_samples = total_samples - val_samples - test_samples - input_size - output_size + 1
+        
+        for i in range(train_samples):
+            x_train.append(df[i:i+input_size])
+            y_train.append(df[i+input_size:i+input_size+output_size])
+        
+        for i in range(train_samples, train_samples + val_samples):
+            x_val.append(df[i:i+input_size])
+            y_val.append(df[i+input_size:i+input_size+output_size])
+
+        for i in range(train_samples + val_samples, train_samples + val_samples + test_samples):
+            x_test.append(df[i:i+input_size])
+            y_test.append(df[i+input_size:i+input_size+output_size])
     
-    return inputs, outputs
+    return (
+        np.array(x_train), np.array(y_train),
+        np.array(x_val), np.array(y_val),
+        np.array(x_test), np.array(y_test)
+    )
 
 def train_LSTM():
     model = Sequential()
-    model.add(LSTM(64, activation='relu', return_sequences=True, input_shape=INPUT_SHAPE))
+    model.add(LSTM(64, activation='relu', return_sequences=True, input_shape=INPUT_SHAPE, recurrent_dropout=0.2))
     model.add(LSTM(32, activation='relu', return_sequences=False))
     model.add(Dense(PREDICTION_HORIZON * NR_OF_FEATURES, activation='linear'))
     model.add(Reshape(OUTPUT_SHAPE))
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=1e-6)
 
-    model.fit(X, y, epochs=36, batch_size=32)
+    model.fit(x_train, y_train, epochs=36, batch_size=32, validation_data=(x_val, y_val), callbacks=[early_stopping, reduce_lr])
     model.save('./lstm/models/model_LSTM.h5')
+    return model
     
 def train_GRU():
     model = Sequential()
-    model.add(GRU(64, activation='relu', return_sequences=True, input_shape=INPUT_SHAPE))
+    model.add(GRU(64, activation='relu', return_sequences=True, input_shape=INPUT_SHAPE, recurrent_dropout=0.2))
     model.add(GRU(32, activation='relu', return_sequences=False))
     model.add(Dense(PREDICTION_HORIZON * NR_OF_FEATURES, activation='linear'))
     model.add(Reshape(OUTPUT_SHAPE))
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(X, y, epochs=36, batch_size=32)
+    model.fit(x_train, y_train, epochs=36, batch_size=32, validation_data=(x_val, y_val))
     model.save('./lstm/models/model_GRU.h5')
+    return model
 
 def train_CNN():
     model = Sequential()
@@ -216,13 +262,16 @@ def train_CNN():
     
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(X, y, epochs=36, batch_size=32)
+    model.fit(x_train, y_train, epochs=36, batch_size=32, validation_data=(x_val, y_val))
     model.save('./lstm/models/model_CNN.h5')
-    
-def predict():
-    model = load_model('./lstm/models/model.h5')
+    return model
 
-    x_test=X[0].reshape(1, 6, 12)
+def evaluate_model(model = load_model('./lstm/models/model_LSTM.h5')):
+    test_loss, test_accuracy = model.evaluate(x_test, y_test)
+    print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}")
+  
+def predict_model(model = load_model('./lstm/models/model_LSTM.h5')):
+    x_test=x_val[0].reshape(1, 6, 12)
 
     predictions = model.predict(x_test, verbose=0)
     
@@ -263,7 +312,8 @@ def predict():
     print(df_predictions)
 
 preprocess_data()
-# train_LSTM()
-# train_GRU()
-train_CNN()
-# predict()
+# model_LSTM = train_LSTM()
+# model_GRU = train_GRU()
+# model_CNN = train_CNN()
+evaluate_model()
+# predict_model()
