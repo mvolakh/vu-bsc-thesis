@@ -11,6 +11,8 @@
     "preprocess-augment": "node ./lstm/preprocess-augment.js",
     "preprocess-reduce": "node ./lstm/preprocess-reduce.js",
     "preprocess-sort": "node ./lstm/preprocess-sort.js",
+    "remove-outliers": "python ./lstm/remove-outliers.py",
+    "impute-missing": "python ./lstm/impute-missing.py",
     "train": "python ./lstm/train.py",
     "predict": "python ./lstm/predict.py",
     "install-python-dependencies": "pip install tensorflow pymongo python-dotenv pandas",
