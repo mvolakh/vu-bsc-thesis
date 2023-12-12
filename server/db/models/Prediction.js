@@ -8,8 +8,16 @@ function validatePredictionsLength(val) {
 const predictionSchema = new Schema({
     sensor: {
         type: String,
+        required: true
+    },
+    modelType: {
+        type: String,
         required: true,
-        unique: true
+        enum: ['LSTM', 'GRU', 'CNN']
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
     },
     predictions: {
         type: [
