@@ -1,5 +1,6 @@
 export interface ForecastData {
     name: string;
+    timestamp: string;
     sensorData: {
       _id?: string;
       sensor?: string;
