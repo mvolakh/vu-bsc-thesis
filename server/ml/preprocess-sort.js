@@ -19,10 +19,8 @@ async function processCSVFiles() {
         .filter((file) => file.startsWith('sensors-thingy-'))
         .sort();
 
-    // Create an object to store data for each sensor
     const sensorData = {};
 
-    // Read and store data for each sensor from all input files
     for (const file of csvFiles) {
         const rdFilePath = path.join(process.env.PROCESSED_AUG_DATA_PATH, file);
         const parser = csv.parse({ headers: true });
@@ -44,7 +42,6 @@ async function processCSVFiles() {
         });
     }
 
-    // Create a separate file for each sensor and write the data for that sensor
     for (const sensorId in sensorData) {
         if (sensorData.hasOwnProperty(sensorId)) {
             const sensorOutputFile = `${sensorId}.csv`;
