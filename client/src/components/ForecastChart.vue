@@ -1,5 +1,5 @@
 <script lang='ts'>
-import { computed, defineComponent, inject, ref, watch } from "vue";
+import { computed, defineComponent, inject, ref, watch, onMounted } from "vue";
 import { BarChart, useBarChart } from "vue-chart-3";
 import { Chart, type ChartData, type ChartOptions, registerables, type TooltipItem } from "chart.js";
 import type { ForecastData } from "../types/ForecastData";
@@ -11,7 +11,9 @@ export default defineComponent({
   name: "ForecastChart",
   components: { BarChart },
   props: {
-    roomPredictions: Object as () => ForecastData
+    roomPredictions: Object as () => ForecastData,
+    sensorPredictions: Object as () => ForecastData,
+    updateStatus: Boolean
   },
   setup(props) {
     const getColorCodeHex = (color: string) => {
@@ -51,31 +53,59 @@ export default defineComponent({
     const getHourTick = (timestamp: string) => new Date(timestamp).toLocaleString('en-US', { hour: 'numeric', hour12: true });
 
     const roomPredictionsRef = ref(props.roomPredictions);
+    const sensorPredictionsRef = ref(props.sensorPredictions);
     const dataValues = ref([33.3, 33.3, 33.3]);
     const dataLabels = ref(["9AM", "10AM", "11AM"]);
     const dataColorCode = ref(["#36454F","#36454F", "#36454F"]);
 
-    if (props.roomPredictions?.sensorData.predictions) {
-        // Change bar colors
-        const barColors = [];
-        for (let i in props.roomPredictions?.sensorData.predictions) {
-            barColors.push(getColorCodeHex(props.roomPredictions?.sensorData.predictions[i].colorCode))
-        }
-        dataColorCode.value = barColors;
+    const initRoomPredictions = function() {
+        if (props.roomPredictions?.sensorData.predictions) {
+            // Change bar colors
+            const barColors = [];
+            for (let i in props.roomPredictions?.sensorData.predictions) {
+                barColors.push(getColorCodeHex(props.roomPredictions?.sensorData.predictions[i].colorCode))
+            }
+            dataColorCode.value = barColors;
 
-        // Change var values
-        const barVals = [];
-        for (let i in props.roomPredictions?.sensorData.predictions) {
-            barVals.push(getOccupancyVal(props.roomPredictions?.sensorData.predictions[i].colorCode))
-        }
-        dataValues.value = barVals;
+            // Change var values
+            const barVals = [];
+            for (let i in props.roomPredictions?.sensorData.predictions) {
+                barVals.push(getOccupancyVal(props.roomPredictions?.sensorData.predictions[i].colorCode))
+            }
+            dataValues.value = barVals;
 
-        // Change bar labels
-        const barXTicks = [];
-        for (let i in props.roomPredictions?.sensorData.predictions) {
-            barXTicks.push(getHourTick(props.roomPredictions?.sensorData.predictions[i].timestamp))
+            // Change bar labels
+            const barXTicks = [];
+            for (let i in props.roomPredictions?.sensorData.predictions) {
+                barXTicks.push(getHourTick(props.roomPredictions?.sensorData.predictions[i].timestamp))
+            }
+            dataLabels.value = barXTicks;
         }
-        dataLabels.value = barXTicks;
+    }
+
+    const initSensorPredictions = function() {
+        if (props.sensorPredictions?.sensorData.predictions) {
+            // Change bar colors
+            const barColors = [];
+            for (let i in props.sensorPredictions?.sensorData.predictions) {
+                barColors.push(getColorCodeHex(props.sensorPredictions?.sensorData.predictions[i].colorCode))
+            }
+            dataColorCode.value = barColors;
+
+            // Change var values
+            const barVals = [];
+            for (let i in props.sensorPredictions?.sensorData.predictions) {
+                barVals.push(getOccupancyVal(props.sensorPredictions?.sensorData.predictions[i].colorCode))
+            }
+            dataValues.value = barVals;
+
+            // Change bar labels
+            const barXTicks = [];
+            for (let i in props.sensorPredictions?.sensorData.predictions) {
+                barXTicks.push(getHourTick(props.sensorPredictions?.sensorData.predictions[i].timestamp))
+            }
+            dataLabels.value = barXTicks;
+        }
     }
 
     const testData = computed<ChartData<"bar">>(() => ({
@@ -120,13 +150,20 @@ export default defineComponent({
                 callbacks: {
                     footer: function(tooltipItems: TooltipItem<"bar">[]) {
                         const index = tooltipItems[0].dataIndex;
-                        
 
                         if (props.roomPredictions?.sensorData.predictions) {
                             return [
                                 `CO2 Level: ${props.roomPredictions?.sensorData.predictions[index].co2Level}`,
                                 `Light Level: ${props.roomPredictions?.sensorData.predictions[index].lightLevel}`,
                                 `Noise Level: ${props.roomPredictions?.sensorData.predictions[index].soundLevel}`
+                            ];
+                        }
+
+                        if (props.sensorPredictions?.sensorData.predictions) {
+                            return [
+                                `CO2 Level: ${props.sensorPredictions?.sensorData.predictions[index].co2Level}`,
+                                `Light Level: ${props.sensorPredictions?.sensorData.predictions[index].lightLevel}`,
+                                `Noise Level: ${props.sensorPredictions?.sensorData.predictions[index].soundLevel}`
                             ];
                         }
                         return "Unavailable";
@@ -137,6 +174,20 @@ export default defineComponent({
                         let label = '';
                         if (props.roomPredictions?.sensorData.predictions) {
                             switch (props.roomPredictions?.sensorData.predictions[index].colorCode) {
+                                case 'red':
+                                    label = "Expected to be fully occupied";
+                                    break;
+                                case 'orange':
+                                    label = "Might not have spaces available";
+                                    break;
+                                case 'green':
+                                    label = "Expected to be unoccupied";
+                                    break;
+                            }
+                        }
+
+                        if (props.sensorPredictions?.sensorData.predictions) {
+                            switch (props.sensorPredictions?.sensorData.predictions[index].colorCode) {
                                 case 'red':
                                     label = "Expected to be fully occupied";
                                     break;
@@ -169,6 +220,20 @@ export default defineComponent({
                             }
                         }
 
+                        if (props.sensorPredictions?.sensorData.predictions) {
+                            switch (props.sensorPredictions?.sensorData.predictions[index].colorCode) {
+                                case 'red':
+                                    labelColor = '#FF0000';
+                                    break;
+                                case 'orange':
+                                    labelColor = '#FFA500';
+                                    break;
+                                case 'green':
+                                    labelColor = '#008000';
+                                    break;
+                            }
+                        }
+
                         return labelColor;
                     },
                 }
@@ -186,42 +251,33 @@ export default defineComponent({
         options,
     });
 
+    watch(() => props.roomPredictions?.sensorData.predictions, () => {
+        initRoomPredictions();
+        barChartRef.value?.update();
+    });
 
+    watch(() => props.sensorPredictions?.sensorData.predictions, () => {
+        initSensorPredictions();
+        barChartRef.value?.update();
+    });
 
-    async function fetchData() {
-            axios.get('/api/forecast/test')
-                .then(res => {
-                    if (res.status == 200 || res.status == 304) {
-                        // console.log(`Fetched historic sensor data ${JSON.stringify(res.data, null, 2)}`)
-                        roomPredictionsRef.value = res.data;
-                    } 
-                })
-                .catch(err => {
-                    if (err) {
-                        console.log(`Failed to fetch historic sensor data ${err}`)
-                    }
-                })
+    watch(() => props.updateStatus, () => {
+        if (props.roomPredictions?.sensorData.predictions) {
+            initRoomPredictions();
         }
+        if (props.sensorPredictions?.sensorData.predictions) {
+            initSensorPredictions();
+        }
+        
+        barChartRef.value?.update();
+    })
 
-    // async function test() {
-    //     console.log("clicked");
-    //     // dataValues.value[0] = 100;
-    //     await fetchData().then(updateChart);
-
-    // }
-
-    // watch(() => props.roomPredictions?.sensorData.predictions, () => {
-    //     console.log('Prop value changed:');
-
-
-    //     barChartRef.value?.update();
-    // });
+    onMounted(() => {
+        initRoomPredictions();
+        initSensorPredictions();
+    })
 
     // function updateChart() {
-    //     // console.log("updated man");
-    //     if (props.roomPredictions?.sensorData.predictions) {
-    //         console.log("color", props.roomPredictions?.sensorData.predictions[0].colorCode)
-    //     }
     //     barChartRef.value?.update();
     // }
 

@@ -3,6 +3,8 @@ import { defineComponent, inject, ref } from 'vue';
 import type { RoomData } from '../types/RoomData';
 import SensorDetails from './SensorDetails.vue';
 import MobileSensorDetails from './MobileSensorDetails.vue';
+import type { ForecastData } from '@/types/ForecastData';
+import type { SensorData } from '../types/SensorData';
 
 export default defineComponent({
     name: 'MobileNavBar',
@@ -10,6 +12,10 @@ export default defineComponent({
     emits: ["closeMobileDialog"],
     props: {
         roomData: Object as () => RoomData,
+        sensorData: Object as () => SensorData,
+        roomPredictions: Object as () => ForecastData,
+        sensorPredictions: Object as () => ForecastData,
+        updateSuccess: Boolean,
         mobileDialog: Boolean
     },
     setup() {
