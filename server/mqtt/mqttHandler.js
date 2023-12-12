@@ -1,10 +1,14 @@
 const mqtt = require('mqtt');
 const colors = require('colors');
+var fs = require('fs');
 
 const SensorData = require('../db/models/SensorData')
 const Room = require('../db/models/Room');
+const Sensor = require('../db/models/Sensor');
 const LatestSensorData = require('../db/models/LatestSensorData');
 const Prediction = require('../db/models/Prediction');
+
+let thresholds = {};
 
 const mqttOptions = {
     clientId: `mqtt_${Math.random().toString(16).slice(3)}`,
@@ -14,6 +18,7 @@ const mqttOptions = {
 
 const connect = (io) => {
     const mqttClient = mqtt.connect(`mqtt://${process.env.MQTT_HOST}`, mqttOptions)
+    loadThresholdsJSON();
 
     mqttClient.on('connect', () => {
         console.log(`[MQTT] ${colors.green("Connection established successfully")}`);
@@ -34,9 +39,12 @@ const connect = (io) => {
         } else if (isType2Message(jsonData) && messageBuffer.has(jsonData.sensor)) {
             const completeData = { ...messageBuffer.get(jsonData.sensor), ...jsonData }
             let room = await Room.findOne({ sensor: completeData.sensor });
-            // const colorCode = calcRoomColorCode(completeData);
             room.colorCode = calcRoomColorCode(completeData);
             await room.save();
+
+            let sensor = await Sensor.findOne({ name: completeData.sensor });
+            sensor.colorCode = calcRoomColorCode(completeData);
+            await sensor.save();
 
             room = await Room.findOne({ sensor: completeData.sensor });
 
@@ -63,16 +71,6 @@ const connect = (io) => {
                 colorCode: room.colorCode
             });
 
-            // const predictions = await Prediction.findOne({ sensor: completeData.sensor });
-
-            // if (predictions) {
-            //     // console.log(predictions)
-            //     io.emit('forecastData', {
-            //         name: 'NU-11A-46',
-            //         sensorData: predictions
-            //     })
-            // }
-
             messageBuffer.delete(jsonData.sensor)
         }
     });
@@ -88,18 +86,34 @@ const isType2Message = (message) => {
     return 'color_r' in message;
 }
 
+const loadThresholdsJSON = () => {
+    thresholds = JSON.parse(fs.readFileSync('./ml/obj/thresholds.json', 'utf8'));
+}
+
 const calcRoomColorCode = (message) => {
-    if (!message.eCO2 && !calculateAverageLightLevel(message)) {
-        return 'grey'
-    } else {
-        if (message.eCO2 > 1000 && calculateAverageLightLevel(message) > 15) {
-            return 'red'
-        } else if (message.eCO2 > 750 && calculateAverageLightLevel(message) > 15) {
-            return 'orange'
+    const currentDate = new Date();
+    const day = currentDate.getDay();
+    const hour = currentDate.getHours();
+
+    const metrics = ['eCO2', 'light', 'sound'];
+    for (let i = 0; i < metrics.length; i++) {
+        const metric = metrics[i];
+        if (metric === 'light') {
+            const light = calculateAverageLightLevel(message);
+            if (light > thresholds[message['sensor']][day][hour][metric]['high']) {
+                return 'red';
+            } else if (light > thresholds[message['sensor']][day][hour][metric]['medium']) {
+                return 'orange';
+            }
         } else {
-            return 'green'
-        } 
+            if (message[metric] > thresholds[message['sensor']][day][hour][metric]['high']) {
+                return 'red';
+            } else if (message[metric] > thresholds[message['sensor']][day][hour][metric]['medium']) {
+                return 'orange';
+            }
+        }
     }
+    return 'green';
 }
 
 const calculateAverageLightLevel = (message) => {
