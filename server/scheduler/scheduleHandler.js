@@ -6,6 +6,8 @@ const dotenvExpand = require("dotenv-expand").expand(dotenv);
 
 const Prediction = require('../db/models/Prediction');
 const SensorData = require('../db/models/SensorData');
+const Sensor = require('../db/models/Sensor');
+const Room = require('../db/models/Room');
 
 
 const schedulePredictions = async (io) => {
@@ -14,11 +16,11 @@ const schedulePredictions = async (io) => {
     const job = schedule.scheduleJob(everyHour, async () => {
         console.log(`[SCHEDULER] ${colors.blue(`${new Date().toLocaleTimeString()}`)} ${colors.green("Started scheduled database cleanup.")}`);
         execDatabaseCleanup();
+        execMarkOldEntries();
         // execDatabaseBackup();
 
         console.log(`[SCHEDULER] ${colors.blue(`${new Date().toLocaleTimeString()}`)} ${colors.green("Started forecasting.")}`);
         execPredictScript(io);
-
     });
 
     return job;
@@ -57,9 +59,107 @@ const execDatabaseCleanup = async () => {
     try {
         const res = await SensorData.deleteMany({ timestamp: { $lt: timestampDeletion } });
         console.log(`[DB] ${colors.green("Successfuly deleted old entries. Documents deleted:")} ${res.deletedCount}`);
-      } catch (error) {
+      } catch (err) {
         console.log(`[DB] ${colors.red("Error occurred while deleting old entries:")} ${err}`);
       }
+}
+
+const execMarkOldEntries = async () => {
+    console.log(`[DB] ${colors.green("Starting to update color codes of old entries.")}`);
+
+    const hoursToLeaveUnchanged = 1;
+    const timestampThreshold = new Date();
+    timestampThreshold.setHours(timestampThreshold.getHours() - hoursToLeaveUnchanged);
+
+    try {
+        const sensorsToUpdate = await Sensor.aggregate([
+            {
+                $lookup: {
+                    from: "latestsensordatas",
+                    localField: "name",
+                    foreignField: "sensor",
+                    as: "sensorData"
+                }
+            },
+            {
+                $unwind: "$sensorData"
+            },
+            {
+                $match: {
+                    "sensorData.timestamp": { $lt: timestampThreshold }
+                }
+            }
+        ]);
+
+        const sensorIdsToUpdate = sensorsToUpdate
+            .map(sensor => sensor._id);
+        
+        const sensorUpdateResult = await Sensor.updateMany(
+            { _id: { $in: sensorIdsToUpdate } },
+            { $set: { colorCode: 'grey' } }
+        );
+
+        const roomsToUpdate = await Room.aggregate([
+            {
+                $lookup: {
+                    from: 'latestsensordatas',
+                    localField: 'sensor',
+                    foreignField: 'sensor',
+                    as: 'sensorData'
+                }
+            },
+            {
+                $unwind:
+                {
+                  path: '$sensorData',
+                  preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: {
+                    'sensorData.timestamp': -1
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id',
+                    name: { $first: '$name' },
+                    colorCode: { $first: '$colorCode' },
+                    latestSensorData: { $first: '$sensorData' }
+                }
+            },
+            {
+                $addFields: {
+                    isOlderThanOneHour: {
+                        $cond: {
+                            if: {
+                                $and: [
+                                    { $ne: ["$latestSensorData.timestamp", null] },
+                                    { $lt: ["$latestSensorData.timestamp", timestampThreshold] }
+                                ]
+                            },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const roomIdsToUpdate = roomsToUpdate
+            .filter(room => room.isOlderThanOneHour)
+            .map(room => room._id);
+
+        const roomUpdateResult = await Room.updateMany(
+            { _id: { $in: roomIdsToUpdate } },
+            { $set: { colorCode: 'grey' } }
+        );
+        
+        console.log(`[DB] ${colors.green("Successfuly changed the color code of old entries to grey (sensors).")} Documents changed: ${sensorUpdateResult.modifiedCount}`);
+        console.log(`[DB] ${colors.green("Successfuly changed the color code of old entries to grey (rooms).")} Documents changed: ${roomUpdateResult.modifiedCount}`);
+    } catch (err) {
+        console.log(`[DB] ${colors.red("Error occurred while changing the color of old entries to grey:")} ${err}`);
+    }
 }
 
 const execPredictScript = async (io) => {
