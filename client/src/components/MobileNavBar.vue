@@ -1,15 +1,15 @@
 <script lang="ts">
-import { defineComponent, inject, ref } from 'vue';
+import { defineComponent, inject, ref, watch } from 'vue';
 import type { RoomData } from '../types/RoomData';
-import SensorDetails from './SensorDetails.vue';
 import MobileSensorDetails from './MobileSensorDetails.vue';
 import type { ForecastData } from '@/types/ForecastData';
 import type { SensorData } from '../types/SensorData';
+import type { Floor } from '@/types/Floor';
 
 export default defineComponent({
     name: 'MobileNavBar',
     components: { MobileSensorDetails },
-    emits: ["closeMobileDialog"],
+    emits: ["closeMobileDialog", 'switchMode', 'updateForecasts', 'updateSelectedFloor', 'updatePredictionModel'],
     props: {
         roomData: Object as () => RoomData,
         sensorData: Object as () => SensorData,
@@ -18,10 +18,43 @@ export default defineComponent({
         updateSuccess: Boolean,
         mobileDialog: Boolean
     },
-    setup() {
+    setup(props, { emit }) {
         const menuVisible = ref(false);
+        const mode = ref<boolean>(true);
+        const modeIcon = ref<string>("mdi-sofa"); 
+        const selectedFloor = ref<number>(11);
+        const updateProgress = ref<number>(0);
+        const updateStatus = ref<boolean>(false);
+        const floors = ref<Floor[]>([
+            { title: 'Floor 10', value: 10, icon: 'mdi-keyboard-f10', disabled: false },
+            { title: 'Floor 11', value: 11, icon: 'mdi-keyboard-f11', disabled: false },
+            { title: 'Floor 12', value: 12, icon: 'mdi-keyboard-f12', disabled: false },
+        ]);
+
+        const switchMode = () => {
+            mode.value = !mode.value
+            if (mode.value) {
+                modeIcon.value = "mdi-sofa"
+            } else {
+                modeIcon.value = "mdi-access-point"
+            }
+        }
+
+        const selectFloor = (floor: number) => {
+            selectedFloor.value = floor;
+
+            emit("updateSelectedFloor", selectedFloor.value)
+        };
+
+        watch(() => props.updateSuccess, async () => {
+            updateProgress.value = 2;
+            // updateStatus.value = !updateStatus.value;
+            setTimeout(() => {
+                updateProgress.value = 0;
+            }, 5000);
+        });
         
-        return { menuVisible } 
+        return { menuVisible, updateStatus, floors, selectFloor, switchMode, mode, modeIcon } 
     }
 })
 </script>
@@ -33,9 +66,28 @@ export default defineComponent({
         </router-link>
         <v-app-bar-title>NU Gebouw</v-app-bar-title>
         
+        <v-btn @click="switchMode(); $emit('switchMode', mode);" :icon="modeIcon"></v-btn>
+
+        <v-btn 
+            v-for="item in floors"
+            :key="item.value"
+            :title="item.title"
+            :value="item.value"
+            :icon="item.icon"
+            :disabled="item.disabled"
+            @click="selectFloor(item.value)"
+        ></v-btn>
         
         <v-dialog v-model="mobileDialog" fullscreen :scrim="false" transition="dialog-bottom-transition" class="d-lg-none">
-            <MobileSensorDetails :roomData="roomData" @closeMobileDialog="$emit('closeMobileDialog')"/>
+            <MobileSensorDetails
+                v-if="(roomData) || (sensorData)" 
+                :roomData="roomData" 
+                :sensorData="sensorData" 
+                :roomPredictions="roomPredictions" 
+                :sensorPredictions="sensorPredictions" 
+                :updateStatus="updateStatus"
+                @updatePredictionModel="(model: string) => $emit('updatePredictionModel', model)" 
+                @closeMobileDialog="$emit('closeMobileDialog')"/>
         </v-dialog>
     </v-app-bar>
     
