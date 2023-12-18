@@ -26,10 +26,10 @@ export default defineComponent({
         const forecastRoomData = ref<ForecastData[]>([]);
         const forecastSensorData = ref<ForecastData[]>([]);
         
-        const selectedRoomDataIndex = ref<number>();
-        const selectedSensorDataIndex = ref<number>();
-        const selectedRoomForecastDataIndex = ref<number>();
-        const selectedSensorForecastDataIndex = ref<number>();
+        const selectedRoomDataIndex = ref<number | undefined>(undefined);
+        const selectedSensorDataIndex = ref<number | undefined>(undefined);
+        const selectedRoomForecastDataIndex = ref<number | undefined>(undefined);
+        const selectedSensorForecastDataIndex = ref<number | undefined>(undefined);
 
         let socket = ref<Socket | null>();
 
@@ -206,12 +206,12 @@ export default defineComponent({
         }
 
         const showDataUIHandler = () => {
-            if (selectedRoomDataIndex.value && selectedRoomForecastDataIndex.value) {
+            if (selectedRoomDataIndex.value != undefined && selectedRoomForecastDataIndex.value != undefined) {
                 emit('showRoomData', histRoomData.value[selectedRoomDataIndex.value], forecastRoomData.value[selectedRoomForecastDataIndex.value]);
                 emit('showSensorData', undefined, undefined); 
             }
 
-            if (selectedSensorDataIndex.value && selectedSensorForecastDataIndex.value) {
+            if (selectedSensorDataIndex.value != undefined && selectedSensorForecastDataIndex.value != undefined) {
                 emit('showSensorData', histSensorData.value[selectedSensorDataIndex.value], forecastSensorData.value[selectedSensorForecastDataIndex.value]); 
                 emit('showRoomData', undefined, undefined);
             }
