@@ -14,5 +14,6 @@
 /server/node_modules/
 /server/.vscode/
 /server/db/backups/
+/server/ml/logs/
 
 TODO.md
