@@ -67,7 +67,12 @@ export default defineComponent({
       :sensorData="sensorData"
       :roomPredictions="roomPredictions" 
       :sensorPredictions="sensorPredictions" 
-      :mobileDialog="mobileDialog" 
+      :mobileDialog="mobileDialog"
+      :updateSuccess="updateSuccess"
+      @switchMode="(newMode: boolean) => mode = newMode" 
+      @updateForecasts="updateForecasts = !updateForecasts"
+      @updateSelectedFloor="(newSelectedFloor: number) => selectedFloor = newSelectedFloor"
+      @updatePredictionModel="(newSelectedModel: string) => selectedPredictionModel = newSelectedModel"
       @closeMobileDialog="mobileDialog = false"
       class="d-lg-none"/>
     <v-main>
