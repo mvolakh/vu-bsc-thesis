@@ -22,26 +22,30 @@ This repository hosts a project dedicated to the development of a room occupancy
 
 The following sections contain information on how to replicate/run the project demo.
 
-
-
 ### Starting the project
 
 Requirements:
 [Node.js](https://nodejs.org/en)
 [npm](https://docs.npmjs.com/) (included with a Node.js installation)
+[Python](https://www.python.org/)
+[pip](https://pypi.org/)
 
-**The project has been tested using Node v16.14.2 (any version above should work fine, theoretically).**
+**The project has been tested using Node v16.14.2 (any version above should work just fine, theoretically).**
 
-#### Server
+#### Server Setup
 First install the dependencies:
 
-```cd server && npm install```
+```cd server && npm install && npm run install-python-dependencies```
 
 Then the server could be run by executing the following script and endpoints will be accessible on the port specified in the local environmental variables:
 
 ```npm run start```
 
-#### Client
+The server serves frontend files from the root endpoint ```localhost:{env.PORT}```
+
+#### Client (Development Server) Setup
+
+*In case you want to edit the frontend source code and/or rebuild the distribution, follow the guidelines below.*
 
 First install the dependencies:
 ```cd client && npm install```
@@ -50,7 +54,7 @@ Then the client (dev server) could be run by executing the following script:
 
 ```npm run dev```
 
-Then the application could be accessed at ```localhost:5173```.
+Then the application could be accessed at ```localhost:5173```. Note that you must have the server (backend) running at the same time on port ```8000```.
 
 ### Authorisation
 
