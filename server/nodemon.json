@@ -1,0 +1,3 @@
+{   
+    "ignore": ["ml/", "README", "db/backups/", "dump/"] 
+}
