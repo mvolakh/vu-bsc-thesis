@@ -96,23 +96,49 @@ const calcRoomColorCode = (message) => {
     const hour = currentDate.getHours();
 
     const metrics = ['eCO2', 'light', 'sound'];
+    // for (let i = 0; i < metrics.length; i++) {
+    //     const metric = metrics[i];
+    //     if (metric === 'light') {
+    //         const light = calculateAverageLightLevel(message);
+    //         if (light > thresholds[message['sensor']][day][hour][metric]['high']) {
+    //             return 'red';
+    //         } else if (light > thresholds[message['sensor']][day][hour][metric]['medium']) {
+    //             return 'orange';
+    //         }
+    //     } else {
+    //         if (message[metric] > thresholds[message['sensor']][day][hour][metric]['high']) {
+    //             return 'red';
+    //         } else if (message[metric] > thresholds[message['sensor']][day][hour][metric]['medium']) {
+    //             return 'orange';
+    //         }
+    //     }
+    // }
+
+    let highCounter = 0;
+    let midCounter = 0;
+
     for (let i = 0; i < metrics.length; i++) {
         const metric = metrics[i];
         if (metric === 'light') {
             const light = calculateAverageLightLevel(message);
             if (light > thresholds[message['sensor']][day][hour][metric]['high']) {
-                return 'red';
+                highCounter++;
             } else if (light > thresholds[message['sensor']][day][hour][metric]['medium']) {
-                return 'orange';
+                midCounter++;
             }
         } else {
             if (message[metric] > thresholds[message['sensor']][day][hour][metric]['high']) {
-                return 'red';
+                highCounter++;
             } else if (message[metric] > thresholds[message['sensor']][day][hour][metric]['medium']) {
-                return 'orange';
+                midCounter++;
             }
         }
     }
+
+    if (highCounter >= 2) return 'red';
+    if (midCounter >= 2) return 'orange';
+    if (highCounter >= 1 && midCounter >= 1) return 'orange';
+
     return 'green';
 }
 

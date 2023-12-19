@@ -240,13 +240,29 @@ def db_handler():
             df_predictions = predict("CNN", data)
             save_predictions("CNN", df_predictions)
             
-def calcColorCode(row):    
+def calcColorCode(row):
+    highCounter = 0
+    midCounter = 0
+        
+    # for metric in ['eCO2', 'light', 'sound']:
+    #     if row[metric] > thresholds[row['sensor']][row['day']][row['hour']][metric]['high']:
+    #         return 'red'
+    #     elif row[metric] > thresholds[row['sensor']][row['day']][row['hour']][metric]['medium']:
+    #         return 'orange'
+    
     for metric in ['eCO2', 'light', 'sound']:
         if row[metric] > thresholds[row['sensor']][row['day']][row['hour']][metric]['high']:
-            return 'red'
+            highCounter += 1
         elif row[metric] > thresholds[row['sensor']][row['day']][row['hour']][metric]['medium']:
-            return 'orange'
-    
+            midCounter += 1
+        
+    if highCounter >= 2:
+        return 'red'
+    if midCounter >= 2:
+        return 'orange'
+    if highCounter >= 1 and midCounter >= 1:
+        return 'orange'
+
     return 'green'
                     
 def preprocess_input(data):
